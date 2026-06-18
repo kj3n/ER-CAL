@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>이터널 리턴 스크림 리더보드</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        /* 테이블 전체 스타일 지정 */
+        table {
+            width: 100%;
+            max-width: 800px;
+            border-collapse: collapse; /* 테두리를 한 줄로 깔끔하게 합칩니다 */
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 약간의 그림자 효과를 줍니다 */
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ddd; /* 각 행 아래에 옅은 선을 긋습니다 */
+        }
+        th {
+            background-color: #34495e;
+            color: #fff;
+            font-weight: bold;
+        }
+        /* 1등 행의 배경색을 연한 금색으로 강조합니다 */
+        tr:nth-child(1) td {
+            background-color: #fff8dc;
+            font-weight: bold;
+        }
+        /* 마우스를 올렸을 때 행의 배경색이 살짝 변하는 효과입니다 */
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>이터널 리턴 스크림 최종 결과</h1>
+    
+    <table id="leaderboard">
+        <thead>
+            <tr>
+                <th>최종 순위</th>
+                <th>팀명</th>
+                <th>총점</th>
+                <th>순위 점수</th>
+                <th>킬 점수</th>
+            </tr>
+        </thead>
+        <tbody id="boardBody"></tbody>
+    </table>
+
+    <script>
+        // =====================================================================
+        // 📝 1. 이터널 리턴 e스포츠 공식 룰셋 정의
+        // =====================================================================
+        // 순위 점수: 1등부터 8등까지의 부여 점수입니다. (시즌 기본 룰 기준)
+        // 프로그래밍에서 리스트는 0번째부터 시작하므로, 0번 칸은 0으로 비워두고 1번 칸부터 1등 점수를 넣습니다.
+        // 배열 인덱스: [0, 1등, 2등, 3등, 4등, 5등, 6등, 7등, 8등]
+        const PLACEMENT_POINTS = [0, 10, 7, 5, 4, 3, 2, 1, 0]; 
+        
+        // 킬 점수: 1킬당 얻는 점수입니다.
+        const POINT_PER_KILL = 1;
+
+
+        // =====================================================================
+        // 📝 2. 데이터 입력 구간 (직접 수정하는 곳)
+        // =====================================================================
+        // 대회가 끝난 후, 여기에 팀명과 각 라운드별 결과를 직접 입력하시면 됩니다.
+        // 필요에 따라 { teamName: "...", rounds: [ ... ] } 블록을 계속 복사해서 추가하세요.
+        const scrimData = [
+            {
+                teamName: "팀 알파",
+                rounds: [
+                    { rank: 1, kills: 6 }, // 1라운드: 1등, 6킬
+                    { rank: 4, kills: 2 }, // 2라운드: 4등, 2킬
+                    { rank: 8, kills: 0 }  // 3라운드: 8등, 0킬 (광탈)
+                ]
+            },
+            {
+                teamName: "팀 브라보",
+                rounds: [
+                    { rank: 2, kills: 4 },
+                    { rank: 2, kills: 5 },
+                    { rank: 1, kills: 3 }
+                ]
+            },
+            {
+                teamName: "팀 찰리",
+                rounds: [
+                    { rank: 3, kills: 8 },
+                    { rank: 5, kills: 1 },
+                    { rank: 2, kills: 6 }
+                ]
+            }
+        ];
+
+
+        // =====================================================================
+        // 📝 3. 점수 계산 로직
+        // =====================================================================
+        // 최종 결과를 담을 빈 리스트를 만듭니다.
+        let finalResults = [];
+
+        // 입력한 팀 데이터를 하나씩 꺼내서 점수를 계산합니다.
+        for (let i = 0; i < scrimData.length; i++) {
+            let team = scrimData[i];
+            
+            // 각 팀의 합산 점수를 저장할 변수들을 0으로 초기화합니다.
+            let totalPlacementScore = 0;
+            let totalKillScore = 0;
+            let finalRoundRank = 0; // 동점자 처리를 위해 마지막 라운드 순위를 기억해야 합니다.
+
+            // 해당 팀이 치른 모든 라운드를 반복하며 점수를 누적합니다.
+            for (let j = 0; j < team.rounds.length; j++) {
+                let round = team.rounds[j];
+                
+                // 순위에 해당하는 점수를 배열에서 가져옵니다. (만약 8등을 초과하는 숫자가 입력되면 0점으로 처리합니다)
+                let placementScore = PLACEMENT_POINTS[round.rank] || 0;
+                let killScore = round.kills * POINT_PER_KILL;
+
+                // 가져온 점수들을 총합 변수에 더합니다.
+                totalPlacementScore += placementScore;
+                totalKillScore += killScore;
+
+                // 만약 현재 계산 중인 라운드가 가장 마지막 라운드라면, 그 순위를 기억해둡니다.
+                if (j === team.rounds.length - 1) {
+                    finalRoundRank = round.rank;
+                }
+            }
+
+            // 모든 라운드 계산이 끝난 팀의 최종 정보를 finalResults 리스트에 담아줍니다.
+            finalResults.push({
+                name: team.teamName,
+                totalScore: totalPlacementScore + totalKillScore, // 순위 점수 + 킬 점수
+                placementScore: totalPlacementScore,
+                killScore: totalKillScore,
+                lastRoundRank: finalRoundRank // 동점자 타이브레이커용 데이터
+            });
+        }
+
+
+        // =====================================================================
+        // 📝 4. 동점자 타이브레이커 및 정렬 로직 (공식 규정 적용)
+        // =====================================================================
+        // 1순위: 총점 (내림차순) / 2순위: 총 킬 수 (내림차순) / 3순위: 마지막 라운드 순위 (오름차순, 숫자가 작을수록 높음)
+        finalResults.sort((a, b) => {
+            // 1순위 비교: 총점이 다르면 총점이 높은 팀을 위로 올립니다.
+            if (b.totalScore !== a.totalScore) {
+                return b.totalScore - a.totalScore; 
+            }
+            
+            // 2순위 비교: 총점이 같다면, 총 킬 점수(킬 수)가 더 많은 팀을 위로 올립니다.
+            if (b.killScore !== a.killScore) {
+                return b.killScore - a.killScore;
+            }
+
+            // 3순위 비교: 킬 수마저 같다면, 마지막 라운드의 순위 숫자가 '작은 팀(더 높은 순위)'을 위로 올립니다.
+            return a.lastRoundRank - b.lastRoundRank; 
+        });
+
+
+        // =====================================================================
+        // 📝 5. 화면(HTML)에 결과 출력하기
+        // =====================================================================
+        // 웹 브라우저의 <tbody> 영역을 찾아옵니다.
+        const boardBody = document.getElementById('boardBody');
+
+        // 정렬이 완료된 결과를 하나씩 꺼내서 표의 행(<tr>)으로 만들어 붙여줍니다.
+        for (let i = 0; i < finalResults.length; i++) {
+            let result = finalResults[i];
+            
+            // 표의 한 줄을 뜻하는 <tr> 태그를 생성합니다.
+            let tr = document.createElement('tr');
+            
+            // 생성한 <tr> 안에 <td>(각 칸) 데이터를 문자로 조합해서 집어넣습니다.
+            tr.innerHTML = `
+                <td>${i + 1}등</td>
+                <td>${result.name}</td>
+                <td><strong>${result.totalScore}점</strong></td>
+                <td>${result.placementScore}점</td>
+                <td>${result.killScore}점</td>
+            `;
+            
+            // 완성된 한 줄을 <tbody> 안에 밀어 넣습니다.
+            boardBody.appendChild(tr);
+        }
+    </script>
+</body>
+</html>
